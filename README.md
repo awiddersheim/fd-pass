@@ -1,7 +1,7 @@
 # fd-pass
 
 Project to mess around with passing file descriptors between
-applications using UNIX-domain sockets and SCM_RIGHTs. Some of the `C`
+applications using UNIX-domain sockets and `SCM_RIGHTS`. Some of the `C`
 code was taken from this amazing [Cloudflare blog article][cf_blog]. The
 Python code was inspired by the [Python docs][py_docs] as well as bits
 from the standard library. Also, credit to [Cindy Sridharan][cindy_blog]
@@ -60,7 +60,7 @@ $ nc localhost 8000
 
 Output should look like the following:
 
-<ins>User</ins>
+**User**
 
 ```
 $ nc localhost 8000
@@ -68,7 +68,7 @@ Hello from Quarterback on PID (373)!
 Hello from Wide Receiver on PID (520)!
 ```
 
-<ins>Quarterback</ins>
+**Quarterback**
 
 ```
 $ ./qb
@@ -82,7 +82,7 @@ Closing connection from (127.0.0.1:60316)
 Shutting down
 ```
 
-<ins>Wide Receiver</ins>
+**Wide Receiver**
 
 ```
 $ python wr.py
