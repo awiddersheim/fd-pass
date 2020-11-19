@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
             }
 
             if (send_fd(unix_sock, fd) < 0) {
-                printf("Could not send_fd()\n");
+                printf("Could not send_fd() over UNIX socket (%s)\n", unix_addr.sun_path);
             }
 
             printf(
