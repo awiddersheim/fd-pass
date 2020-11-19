@@ -5,12 +5,46 @@ import os
 import select
 import signal
 import socket
+import threading
 
+from concurrent.futures import ThreadPoolExecutor
+
+EXECUTOR = ThreadPoolExecutor(
+    max_workers=10,
+    thread_name_prefix='ClientHandler',
+)
+SHUTDOWN_EVENT = threading.Event()
 UNIX_SOCKET_FILENAME = 'fd-pass.sock'
 
 
 def signal_handler(signum, frame):
     frame.f_globals['sig_recv'] = signum
+
+
+def client_handler(sock, addr, port):
+    thread_name = threading.current_thread().name
+
+    print(f'Handling connection from ({addr}:{port}) in ({thread_name})')
+
+    while True:
+        fds, *_ = select.select([sock], [], [], 0.1)
+
+        if fds:
+            data = sock.recv(1024)
+
+            if not data:
+                break
+
+            sock.sendall(data)
+
+        if SHUTDOWN_EVENT.is_set():
+            print(f'Received shutdown event in ({thread_name})')
+
+            break
+
+    print(f'Closing connection from ({addr}:{port})')
+
+    sock.close()
 
 
 # NOTE(awiddersheim): Ripped this straight from the Python docs[1].
@@ -107,9 +141,15 @@ while quit != 1:
 
         client_sock.sendall(f'Hello from Wide Receiver on PID ({os.getpid()})!\n'.encode())
 
-        print(f'Closing connection from ({addr}:{port})')
+        print('Starting client thread')
 
-        client_sock.close()
+        EXECUTOR.submit(
+            client_handler,
+            sock=client_sock,
+            addr=addr,
+            port=port,
+        )
+
 
 print('Shutting down')
 
@@ -117,3 +157,7 @@ if qb_sock:
     qb_sock.close()
 
 sock.close()
+
+SHUTDOWN_EVENT.set()
+EXECUTOR.shutdown()
+
