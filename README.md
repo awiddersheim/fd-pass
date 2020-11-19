@@ -60,6 +60,14 @@ $ nc localhost 8000
 
 Output should look like the following:
 
+<ins>User</ins>
+
+```
+$ nc localhost 8000
+Hello from Quarterback on PID (373)!
+Hello from Wide Receiver on PID (520)!
+```
+
 <ins>Quarterback</ins>
 
 ```
@@ -86,14 +94,6 @@ Closing connection from (127.0.0.1:60316)
 Connection on (fd-pass.sock) closed
 ^CProcessing signal (SIGINT)
 Shutting down
-```
-
-<ins>User</ins>
-
-```
-$ nc localhost 8000
-Hello from Quarterback on PID (373)!
-Hello from Wide Receiver on PID (520)!
 ```
 
 ## Building
