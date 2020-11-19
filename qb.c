@@ -86,6 +86,8 @@ int main(int argc, char *argv[])
     struct sockaddr_in client_addr;
     int connect_message = 1;
     int connected = 0;
+    int exit_code = 0;
+    int fatal_error = 0;
     int fd;
     fd_set fds;
     char message[1024];
@@ -169,31 +171,36 @@ int main(int argc, char *argv[])
             if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
                 printf("Could not create socket\n");
 
-                return 1;
+                fatal_error = 1;
+                goto cleanup;
             }
 
             if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1) {
                 printf("Could not set address reuse\n");
 
-                return 1;
+                fatal_error = 1;
+                goto cleanup;
             }
 
             if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) == -1) {
                 printf("Could not set port reuse\n");
 
-                return 1;
+                fatal_error = 1;
+                goto cleanup;
             }
 
             if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
                 printf("Could not bind to port (%d)\n", port);
 
-                return 1;
+                fatal_error = 1;
+                goto cleanup;
             }
 
             if (listen(sock, 128) < 0) {
                 printf("Could not listen on port (%d)\n", port);
 
-                return 1;
+                fatal_error = 1;
+                goto cleanup;
             }
 
             printf("Listening on 0.0.0.0:%d\n", port);
@@ -260,10 +267,17 @@ int main(int argc, char *argv[])
         }
     }
 
+    cleanup:
+        if (fatal_error != 0) {
+            printf("Encountered fatal error\n");
+
+            exit_code = 1;
+        }
+
     printf("Shutting down\n");
 
     close(unix_sock);
     close(sock);
 
-    return 0;
+    return exit_code;
 }
