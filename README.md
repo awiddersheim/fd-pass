@@ -72,7 +72,7 @@ Hello from Wide Receiver on PID (520)!
 
 ```
 $ ./qb
-`Starting Quarterback with PID (373)
+Starting Quarterback with PID (373)
 Connecting to UNIX socket (fd-pass.sock)
 Connected to UNIX socket (fd-pass.sock)
 Listening on 0.0.0.0:8000
