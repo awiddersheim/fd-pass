@@ -60,8 +60,7 @@ $ nc localhost 8000
 
 Output should look like the following:
 
-Quarterback
------------
+<ins>Quarterback</ins>
 
 ```
 $ ./qb
@@ -75,8 +74,7 @@ Closing connection from (127.0.0.1:60316)
 Shutting down
 ```
 
-Wide Receiver
--------------
+<ins>Wide Receiver</ins>
 
 ```
 $ python wr.py
@@ -90,8 +88,7 @@ Connection on (fd-pass.sock) closed
 Shutting down
 ```
 
-User
-----
+<ins>User</ins>
 
 ```
 $ nc localhost 8000
