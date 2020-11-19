@@ -20,9 +20,9 @@ int send_fd(int unix_sock, int fd)
 {
     char message[1];
 
-    /* NOTE(awiddersheim): Send the number of file descriptors as a
-     * single byte in the message. This can get used on the other
-     * end to validate they recieved them all. Stole this method from
+    /* NOTE(awiddersheim): Send the number of file descriptors as a single byte
+     * in the message. This can get used on the receiving end to validate all
+     * file descriptors were transferred properly. This idea comes from
      * Python's multiprocessing.reduction library[1].
      * [1]: https://github.com/python/cpython/blob/3.9/Lib/multiprocessing/reduction.py#L148
      */
