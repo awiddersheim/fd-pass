@@ -127,8 +127,8 @@ int main(int argc, char *argv[])
     tv.tv_usec = 0;
 
     /* Timeout for nanosleep() */
-    ts.tv_sec = 0;
-    ts.tv_nsec= 100000000;
+    ts.tv_sec = 1;
+    ts.tv_nsec= 0;
 
     while (quit != 1)
     {
