@@ -81,7 +81,7 @@ int connect_unix(struct sockaddr_un unix_addr)
     return sock;
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
     struct sockaddr_in addr = { 0 };
     socklen_t addrlen;
