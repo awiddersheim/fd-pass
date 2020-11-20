@@ -83,7 +83,7 @@ int connect_unix(struct sockaddr_un unix_addr)
 
 int main(int argc, char *argv[])
 {
-    struct sockaddr_in addr;
+    struct sockaddr_in addr = { 0 };
     socklen_t addrlen;
     struct sockaddr_in client_addr;
     int connect_message = 1;
@@ -92,14 +92,14 @@ int main(int argc, char *argv[])
     int fatal_error = 0;
     int fd;
     fd_set fds;
-    char message[1024];
+    char message[1024] = { 0 };
     int port = 8000;
     int reuse = 1;
     unsigned int quit = 0;
     int sock;
     struct timeval tv;
     struct timespec ts;
-    struct sockaddr_un unix_addr;
+    struct sockaddr_un unix_addr = { 0 };
     int unix_sock;
 
     sig_recv = 0;
@@ -112,13 +112,9 @@ int main(int argc, char *argv[])
 
     addrlen = sizeof(addr);
 
-    memset(&addr, 0x0, sizeof(struct sockaddr_in));
-
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(port);
-
-    memset(&unix_addr, 0x0, sizeof(struct sockaddr_un));
 
     unix_addr.sun_family = AF_UNIX;
     strncpy(unix_addr.sun_path, UNIX_SOCKET_FILENAME, sizeof(unix_addr.sun_path) - 1);
