@@ -9,6 +9,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#define UNIX_SOCKET_FILENAME "fd-pass.sock"
+
 volatile sig_atomic_t sig_recv;
 
 void signal_recv(int signal)
@@ -99,7 +101,6 @@ int main(int argc, char *argv[])
     struct timespec ts;
     struct sockaddr_un unix_addr;
     int unix_sock;
-    char *unix_socket_filename = "fd-pass.sock";
 
     sig_recv = 0;
 
@@ -120,7 +121,7 @@ int main(int argc, char *argv[])
     memset(&unix_addr, 0x0, sizeof(struct sockaddr_un));
 
     unix_addr.sun_family = AF_UNIX;
-    strncpy(unix_addr.sun_path, unix_socket_filename, sizeof(unix_addr.sun_path) - 1);
+    strncpy(unix_addr.sun_path, UNIX_SOCKET_FILENAME, sizeof(unix_addr.sun_path) - 1);
 
     snprintf(message, sizeof(message), "Hello from Quarterback on PID (%d)!\n", getpid());
 
