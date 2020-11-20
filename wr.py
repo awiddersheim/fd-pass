@@ -42,7 +42,7 @@ def client_handler(sock, addr, port):
 
             break
 
-    print(f'Closing connection from ({addr}:{port})')
+    print(f'Closing connection from ({addr}:{port}) in ({thread_name})')
 
     sock.close()
 
