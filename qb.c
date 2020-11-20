@@ -47,7 +47,7 @@ int send_fd(int unix_sock, int fd)
 
     struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
 
-    *cmsg = (struct cmsghdr){
+    *cmsg = (struct cmsghdr) {
         .cmsg_level = SOL_SOCKET,
         .cmsg_type = SCM_RIGHTS,
         .cmsg_len = CMSG_LEN(sizeof(fd))
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
     /* Timeout for nanosleep() */
     ts.tv_sec = 1;
-    ts.tv_nsec= 0;
+    ts.tv_nsec = 0;
 
     while (quit != 1)
     {
@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
                 case SIGTERM:
                     quit = 1;
                     continue;
+
                 default:
                     break;
             }
@@ -213,6 +214,7 @@ int main(int argc, char *argv[])
         if ((select(FD_SETSIZE, &fds, NULL, NULL, &tv)) < 0) {
             if (errno == EINTR)
                 continue;
+
             else
                 printf("Could not select() on socket\n");
         }
@@ -221,6 +223,7 @@ int main(int argc, char *argv[])
             if ((fd = accept(sock, (struct sockaddr *)&client_addr, &addrlen)) < 0) {
                 if (errno == EINTR || errno == EAGAIN ||  errno == EWOULDBLOCK)
                     continue;
+
                 else
                     printf(
                         "Could not accept() connection from (%s:%d)\n",
@@ -235,7 +238,7 @@ int main(int argc, char *argv[])
                 ntohs(client_addr.sin_port)
             );
 
-           if (send(fd, message, strlen(message), 0) < 0) {
+            if (send(fd, message, strlen(message), 0) < 0) {
                 printf(
                     "Could not send() to (%s:%d)\n",
                     inet_ntoa(client_addr.sin_addr),
@@ -243,9 +246,8 @@ int main(int argc, char *argv[])
                 );
             }
 
-            if (send_fd(unix_sock, fd) < 0) {
+            if (send_fd(unix_sock, fd) < 0)
                 printf("Could not send_fd() over UNIX socket (%s)\n", unix_addr.sun_path);
-            }
 
             printf(
                 "Closing connection from (%s:%d)\n",
@@ -255,6 +257,7 @@ int main(int argc, char *argv[])
 
             close(fd);
         }
+
         else if (FD_ISSET(unix_sock, &fds)) {
             printf("Connection closed on UNIX socket (%s)\n", unix_addr.sun_path);
 
@@ -267,12 +270,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    cleanup:
-        if (fatal_error != 0) {
-            printf("Encountered fatal error\n");
+cleanup:
 
-            exit_code = 1;
-        }
+    if (fatal_error != 0) {
+        printf("Encountered fatal error\n");
+
+        exit_code = 1;
+    }
 
     printf("Shutting down\n");
 
