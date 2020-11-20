@@ -52,7 +52,8 @@ Now, start Quarterback.
 $ ./qb
 ```
 
-Finally, connect with [`nc`][netcat] to see the magic.
+Finally, connect with [`nc`][netcat] to see the magic. Whatever is typed
+should be echoed back.
 
 ```
 $ nc localhost 8000
@@ -66,6 +67,10 @@ Output should look like the following:
 $ nc localhost 8000
 Hello from Quarterback on PID (373)!
 Hello from Wide Receiver on PID (520)!
+foo
+foo
+bar
+bar
 ```
 
 **Quarterback**
