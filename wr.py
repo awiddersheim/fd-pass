@@ -26,10 +26,13 @@ def client_handler(sock, addr, port):
 
     print(f'Handling connection from ({addr}:{port}) in ({thread_name})')
 
-    while True:
-        fds, *_ = select.select([sock], [], [], 0.1)
+    poller = select.poll()
+    poller.register(sock, select.POLLIN)
 
-        if fds:
+    while True:
+        events = poller.poll(0.1)
+
+        if events:
             data = sock.recv(1024)
 
             if not data:

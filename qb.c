@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -91,13 +92,13 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     int exit_code = 0;
     int fatal_error = 0;
     int fd;
-    fd_set fds;
+    struct pollfd fds[2];
     char message[1024] = { 0 };
+    int pollret = 0;
     int port = 8000;
     int reuse = 1;
     unsigned int quit = 0;
     int sock;
-    struct timeval tv;
     struct timespec ts;
     struct sockaddr_un unix_addr = { 0 };
     int unix_sock;
@@ -121,10 +122,6 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
     snprintf(message, sizeof(message), "Hello from Quarterback on PID (%d)!\n", getpid());
 
-    /* Timeout for select() */
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-
     /* Timeout for nanosleep() */
     ts.tv_sec = 1;
     ts.tv_nsec = 0;
@@ -139,13 +136,12 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
                 case SIGQUIT:
                 case SIGTERM:
                     quit = 1;
-                    continue;
-
                 default:
                     break;
             }
 
             sig_recv = 0;
+            continue;
         }
 
         if (connected != 1) {
@@ -204,19 +200,24 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
             printf("Listening on 0.0.0.0:%d\n", port);
         }
 
-        FD_ZERO(&fds);
-        FD_SET(sock, &fds);
-        FD_SET(unix_sock, &fds);
+        fds[0].fd = sock;
+        fds[0].events = POLLIN;
 
-        if ((select(FD_SETSIZE, &fds, NULL, NULL, &tv)) < 0) {
-            if (errno == EINTR)
-                continue;
+        fds[1].fd = unix_sock;
+        fds[1].events = POLLIN;
 
-            else
-                printf("Could not select() on socket\n");
+        pollret = poll(fds, 2, 100);
+
+        if (pollret == -1 && errno != EINTR) {
+            printf("Could not poll() on socket (%i)\n", errno);
+            quit = 1;
         }
 
-        if (FD_ISSET(sock, &fds)) {
+        if (pollret <= 0) {
+            continue;
+        }
+
+        if (fds[0].revents) {
             if ((fd = accept(sock, (struct sockaddr *)&client_addr, &addrlen)) < 0) {
                 if (errno == EINTR || errno == EAGAIN ||  errno == EWOULDBLOCK)
                     continue;
@@ -254,8 +255,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
             close(fd);
         }
-
-        else if (FD_ISSET(unix_sock, &fds)) {
+        else if (fds[1].revents) {
             printf("Connection closed on UNIX socket (%s)\n", unix_addr.sun_path);
 
             close(unix_sock);
