@@ -23,26 +23,37 @@ def signal_handler(signum, frame):
 
 def client_handler(sock, addr, port):
     thread_name = threading.current_thread().name
+    quit = False
 
     print(f'Handling connection from ({addr}:{port}) in ({thread_name})')
 
     poller = select.poll()
     poller.register(sock, select.POLLIN)
 
-    while True:
-        events = poller.poll(0.1)
+    while not quit:
+        for _, flags in poller.poll(0.1):
+            if flags & select.POLLNVAL:
+                print(f'Socket invalid for ({addr}:{port}) in ({thread_name})')
+                # Return here to avoid calling `close()` on a socket
+                # that is invalid.
+                return
+            elif flags & select.POLLERR:
+                print(f'Socket error for ({addr}:{port}) in ({thread_name})')
+                quit = True
+            elif flags & select.POLLHUP:
+                print(f'Socket hangup for ({addr}:{port}) in ({thread_name})')
+                quit = True
+            else:
+                data = sock.recv(1024)
 
-        if events:
-            data = sock.recv(1024)
+                if not data:
+                    quit = True
+                    break
 
-            if not data:
-                break
-
-            sock.sendall(data)
+                sock.sendall(data)
 
         if SHUTDOWN_EVENT.is_set():
             print(f'Received shutdown event in ({thread_name})')
-
             break
 
     print(f'Closing connection from ({addr}:{port}) in ({thread_name})')
@@ -94,7 +105,8 @@ sock.listen(128)
 
 print(f'Listening for messages on ({UNIX_SOCKET_FILENAME})')
 
-watched_fds = set([sock])
+poller = select.poll()
+poller.register(sock, select.POLLIN)
 
 while quit != 1:
     if sig_recv != 0:
@@ -104,54 +116,75 @@ while quit != 1:
             quit = 1
             continue
 
-    read_fds, *_ = select.select(watched_fds, [], [], 0.1)
+    for fd, flags in poller.poll(0.1):
+        if fd == sock.fileno():
+            if flags & (select.POLLNVAL | select.POLLERR | select.POLLHUP):
+                raise Exception(f'Unrecoverable error with ({UNIX_SOCKET_FILENAME}), error was ({flags})')
 
-    if sock in read_fds:
-        qb_sock, _ = sock.accept()
+            # TODO: Allow more than one connection here?
+            if qb_sock:
+                print(f'Already handling connection on ({UNIX_SOCKET_FILENAME})')
+                continue
 
-        print(f'Handling connection from ({UNIX_SOCKET_FILENAME})')
+            qb_sock, _ = sock.accept()
 
-        watched_fds.add(qb_sock)
+            print(f'Handling connection from ({UNIX_SOCKET_FILENAME})')
 
-    if qb_sock in read_fds:
-        msg, fds = recv_fds(
-            sock=qb_sock,
-            msglen=1,
-            maxfds=1,
-        )
+            poller.register(qb_sock, select.POLLIN)
+        elif fd == qb_sock.fileno():
+            msg = None
+            fds = None
+            skip_close = False
 
-        if not msg and not fds:
-            print(f'Connection on ({UNIX_SOCKET_FILENAME}) closed')
+            if flags & select.POLLNVAL:
+                print(f'Socket invalid for QB on ({UNIX_SOCKET_FILENAME})')
+                skip_close = True
+            elif flags & select.POLLERR:
+                print(f'Socket error for QB on ({UNIX_SOCKET_FILENAME})')
+            elif flags & select.POLLHUP:
+                print(f'Socket hangup for QB on ({UNIX_SOCKET_FILENAME})')
+            else:
+                msg, fds = recv_fds(
+                    sock=qb_sock,
+                    msglen=1,
+                    maxfds=1,
+                )
 
-            watched_fds.remove(qb_sock)
-            qb_sock.close()
-            qb_sock = None
+            if not msg and not fds:
+                print(f'Connection for QB on ({UNIX_SOCKET_FILENAME}) closed')
 
-            continue
+                poller.unregister(qb_sock)
 
-        if len(fds) != msg[0]:
-            print(f'Expected ({msg[0]}) file descriptors but got ({len(fds)})')
+                if not skip_close:
+                    qb_sock.close()
 
-        client_sock = socket.socket(
-            family=socket.AF_INET,
-            type=socket.SOCK_STREAM,
-            fileno=fds[0],
-        )
+                qb_sock = None
 
-        addr, port = client_sock.getpeername()
+                continue
 
-        print(f'Handling connection from ({addr}:{port})')
+            if len(fds) != msg[0]:
+                print(f'Expected ({msg[0]}) file descriptors but got ({len(fds)})')
 
-        client_sock.sendall(f'Hello from Wide Receiver on PID ({os.getpid()})!\n'.encode())
+            client_sock = socket.socket(
+                family=socket.AF_INET,
+                type=socket.SOCK_STREAM,
+                fileno=fds[0],
+            )
 
-        print('Starting client thread')
+            addr, port = client_sock.getpeername()
 
-        EXECUTOR.submit(
-            client_handler,
-            sock=client_sock,
-            addr=addr,
-            port=port,
-        )
+            print(f'Handling connection from ({addr}:{port})')
+
+            client_sock.sendall(f'Hello from Wide Receiver on PID ({os.getpid()})!\n'.encode())
+
+            print(f'Starting client thread for ({addr}:{port})')
+
+            EXECUTOR.submit(
+                client_handler,
+                sock=client_sock,
+                addr=addr,
+                port=port,
+            )
 
 
 print('Shutting down')

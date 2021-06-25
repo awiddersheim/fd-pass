@@ -197,14 +197,16 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
                 goto cleanup;
             }
 
+            memset(fds, 0x0, sizeof(fds));
+
+            fds[0].fd = sock;
+            fds[0].events = POLLIN;
+
+            fds[1].fd = unix_sock;
+            fds[1].events = POLLIN;
+
             printf("Listening on 0.0.0.0:%d\n", port);
         }
-
-        fds[0].fd = sock;
-        fds[0].events = POLLIN;
-
-        fds[1].fd = unix_sock;
-        fds[1].events = POLLIN;
 
         pollret = poll(fds, 2, 100);
 
@@ -218,6 +220,21 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
         }
 
         if (fds[0].revents) {
+            if (fds[1].revents & POLLNVAL) {
+                printf("Socket was invalid\n");
+                connected = 0;
+            }
+            else if (fds[1].revents & POLLERR) {
+                printf("Socket had an error\n");
+                connected = 0;
+            }
+
+            if (connected != 1) {
+                close(sock);
+                close(unix_sock);
+                continue;
+            }
+
             if ((fd = accept(sock, (struct sockaddr *)&client_addr, &addrlen)) < 0) {
                 if (errno == EINTR || errno == EAGAIN ||  errno == EWOULDBLOCK)
                     continue;
@@ -256,14 +273,17 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
             close(fd);
         }
         else if (fds[1].revents) {
-            printf("Connection closed on UNIX socket (%s)\n", unix_addr.sun_path);
+            if (fds[1].revents & POLLNVAL) {
+                printf("Socket closed unexpectedly on UNIX socket (%s)\n", unix_addr.sun_path);
+            } else {
+                printf("Connection closed on UNIX socket (%s)\n", unix_addr.sun_path);
+                close(unix_sock);
+            }
 
-            close(unix_sock);
+
             close(sock);
 
             connected = 0;
-
-            continue;
         }
     }
 
